@@ -1,0 +1,44 @@
+<?php if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) die(); ?>
+
+<?
+include(dirname(__FILE__) . "/sdk/rbkmoney_autoload.php");
+
+$order_id = CSalePaySystemAction::GetParamValue("ORDER_ID");
+$shop_id = CSalePaySystemAction::GetParamValue("SHOP_ID");
+$success_url = RBKmoneyUrlHelper::getBaseUrlWithSlash() . 'personal/order/rbkmoney_payment/success.php?orderId=' . $order_id;
+$failed_url = RBKmoneyUrlHelper::getBaseUrlWithSlash() . 'personal/order/rbkmoney_payment/failed.php?orderId=' . $order_id;
+$amount = number_format(CSalePaySystemAction::GetParamValue("SHOULD_PAY"), 2, '.', '');
+$currency = trim(CSalePaySystemAction::GetParamValue("CURRENCY"));
+
+$params = array(
+    'shop_id' => $shop_id,
+    'currency' => $currency,
+    'product' => $order_id,
+    'description' => 'Order ID ' . $order_id,
+    'amount' => $amount,
+    'order_id' => $order_id,
+    'success_url' => $success_url,
+    'failed_url' => $failed_url,
+    'merchant_private_key' => trim(CSalePaySystemAction::GetParamValue("MERCHANT_PRIVATE_KEY")),
+);
+
+$rbk_api = new RBKmoney($params);
+$response_create_invoice = $rbk_api->create_invoice();
+
+$create_invoice_encode = json_decode($response_create_invoice['body'], true);
+$invoiceId = !empty($create_invoice_encode['id']) ? $create_invoice_encode['id'] : '';
+
+$invoice_access_token = $rbk_api->create_access_token($invoiceId);
+?>
+
+<script src="https://checkout.rbk.money/payframe/payframe.js" class="rbkmoney-checkout"
+        data-invoice-id="<?= trim($invoiceId); ?>"
+        data-invoice-access-token="<?= trim($invoice_access_token); ?>"
+        data-endpoint-success="<?= trim($success_url) ?>"
+        data-endpoint-failed="<?= trim($failed_url) ?>"
+        data-amount="<?= $amount ?>"
+        data-currency="<?= $currency ?>"
+        data-name="<?= trim(CSalePaySystemAction::GetParamValue("FORM_COMPANY_NAME")) ?>"
+        data-logo="<?= trim(CSalePaySystemAction::GetParamValue("FORM_PATH_IMG_LOGO")) ?>"
+>
+</script>
