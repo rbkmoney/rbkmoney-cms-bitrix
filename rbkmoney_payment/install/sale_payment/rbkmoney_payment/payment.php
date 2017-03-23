@@ -5,8 +5,8 @@ include(dirname(__FILE__) . "/sdk/rbkmoney_autoload.php");
 
 $order_id = CSalePaySystemAction::GetParamValue("ORDER_ID");
 $shop_id = CSalePaySystemAction::GetParamValue("SHOP_ID");
-$success_url = RBKmoneyUrlHelper::getBaseUrlWithSlash() . 'personal/order/rbkmoney_payment/success.php?orderId=' . $order_id;
-$failed_url = RBKmoneyUrlHelper::getBaseUrlWithSlash() . 'personal/order/rbkmoney_payment/failed.php?orderId=' . $order_id;
+$success_url = RBKmoneyUrlHelper::getBaseUrlWithSlash() . 'personal/order/rbkmoney_payment/success.php';
+$failed_url = RBKmoneyUrlHelper::getBaseUrlWithSlash() . 'personal/order/rbkmoney_payment/failed.php';
 $amount = number_format(CSalePaySystemAction::GetParamValue("SHOULD_PAY"), 2, '.', '');
 $currency = trim(CSalePaySystemAction::GetParamValue("CURRENCY"));
 
@@ -23,10 +23,18 @@ $params = array(
 );
 
 $rbk_api = new RBKmoney($params);
-$response_create_invoice = $rbk_api->create_invoice();
+if (empty($order['PAY_VOUCHER_NUM'])) {
+    $response_create_invoice = $rbk_api->create_invoice();
+    $create_invoice_encode = json_decode($response_create_invoice['body'], true);
+    $invoiceId = !empty($create_invoice_encode['id']) ? $create_invoice_encode['id'] : '';
 
-$create_invoice_encode = json_decode($response_create_invoice['body'], true);
-$invoiceId = !empty($create_invoice_encode['id']) ? $create_invoice_encode['id'] : '';
+    CSaleOrder::Update($order_id, Array(
+        'PAY_VOUCHER_NUM' => $invoiceId,
+        'PAY_VOUCHER_DATE' => $GLOBALS["SALE_INPUT_PARAMS"]["ORDER"]["DATE_INSERT"]
+    ));
+} else {
+    $invoiceId = $order['PAY_VOUCHER_NUM'];
+}
 
 $invoice_access_token = $rbk_api->create_access_token($invoiceId);
 ?>

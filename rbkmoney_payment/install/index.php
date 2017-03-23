@@ -54,18 +54,12 @@ Class rbkmoney_payment extends CModule
             $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/sale/payment/' . $this->MODULE_ID,
             true, true
         );
-//        CopyDirFiles(
-//            $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/' . $this->MODULE_ID . '/install/sale_payment/' . $this->MODULE_ID,
-//            $_SERVER['DOCUMENT_ROOT'] . '/bitrix/php_interface/include/sale_payment/' . $this->MODULE_ID,
-//            true, true
-//        );
         return true;
     }
 
     function UnInstallFiles()
     {
         DeleteDirFilesEx('bitrix/modules/sale/payment/' . $this->MODULE_ID);
-//        DeleteDirFilesEx('bitrix/php_interface/include/sale_payment/' . $this->MODULE_ID);
         DeleteDirFilesEx('personal/order/' . $this->MODULE_ID);
         return true;
     }

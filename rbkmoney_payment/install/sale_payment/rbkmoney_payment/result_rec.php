@@ -9,8 +9,6 @@ CModule::IncludeModule('sale');
 
 <?php
 
-include(dirname(__FILE__) . "/sdk/rbkmoney_autoload.php");
-
 $body = file_get_contents('php://input');
 
 $logs = array(

@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * Class RBKmoneyVerification
+ */
 class RBKmoneyVerification
 {
     /**
@@ -25,3 +28,4 @@ class RBKmoneyVerification
 }
 
 ?>
+
