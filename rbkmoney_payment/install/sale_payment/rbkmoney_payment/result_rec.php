@@ -8,6 +8,7 @@ CModule::IncludeModule('sale');
 <?php if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) die(); ?>
 
 <?php
+include(dirname(__FILE__) . "/sdk/rbkmoney_autoload.php");
 
 $body = file_get_contents('php://input');
 
