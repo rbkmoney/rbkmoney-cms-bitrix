@@ -10,7 +10,6 @@ class RBKmoney
      */
     const HTTP_METHOD_POST = 'POST';
     const HTTP_METHOD_GET = 'GET';
-    const HTTP_METHOD_OPTIONS = 'OPTIONS';
 
     /**
      * HTTP CODE
@@ -68,6 +67,10 @@ class RBKmoney
      */
     public function setApiUrl($api_url)
     {
+        if (filter_var($api_url, FILTER_VALIDATE_URL) === false) {
+            $this->setErrors($api_url . ' is not a valid URL');
+        }
+
         $this->api_url = $api_url;
     }
 
@@ -252,7 +255,6 @@ class RBKmoney
             if (!empty($value) && method_exists($this, $method)) {
                 $this->$method($value);
             }
-            unset($method);
         }
     }
 
@@ -265,9 +267,8 @@ class RBKmoney
                 $value = $this->$method();
                 if (empty($value)) $this->setErrors('<b>' . $field . '</b> is required');
             } else {
-                $this->setErrors('<b>' . $field . '</b> method not found');
+                $this->setErrors($field . ' method not found');
             }
-            unset($method);
         }
     }
 
@@ -276,7 +277,7 @@ class RBKmoney
      *
      * @return string
      */
-    function prepare_due_date()
+    private function prepare_due_date()
     {
         date_default_timezone_set('UTC');
         return date(static::CREATE_INVOICE_TEMPLATE_DUE_DATE, strtotime(static::CREATE_INVOICE_DUE_DATE));
@@ -288,7 +289,7 @@ class RBKmoney
      * @param $order_id
      * @return array
      */
-    function prepare_metadata($order_id)
+    private function prepare_metadata($order_id)
     {
         return [
             'cms' => 'bitrix',
@@ -304,12 +305,12 @@ class RBKmoney
      * @param $amount int
      * @return int
      */
-    function prepare_amount($amount)
+    private function prepare_amount($amount)
     {
         return ($amount > 0) ? ($amount * 100) : $amount;
     }
 
-    function prepare_api_url($path = '', $query_params = [])
+    private function prepare_api_url($path = '', $query_params = [])
     {
         $url = rtrim($this->api_url, '/') . '/' . $path;
         if (!empty($query_params)) {
@@ -318,10 +319,9 @@ class RBKmoney
         return $url;
     }
 
-    function create_invoice()
+    public function create_invoice()
     {
         $this->setRequiredFields([
-            'api_url',
             'merchant_private_key',
             'shop_id',
             'amount',
@@ -347,19 +347,16 @@ class RBKmoney
             'description' => $this->description,
         ];
 
+        $this->validate();
         $url = $this->prepare_api_url('processing/invoices');
         return $this->send($url, static::HTTP_METHOD_POST, $headers, json_encode($data, true), 'init_invoice');
     }
 
-    function create_access_token($invoice_id)
+    public function create_access_token($invoice_id)
     {
         if (empty($invoice_id)) {
             throw new RBKmoneyException('Не передан обязательный параметр invoice_id');
         }
-
-        $this->setRequiredFields([
-            'api_url',
-        ]);
 
         $headers = [];
         $headers[] = 'X-Request-ID: ' . uniqid();
@@ -370,7 +367,7 @@ class RBKmoney
         $url = $this->prepare_api_url('processing/invoices/' . $invoice_id . '/access_tokens');
         $response = $this->send($url, static::HTTP_METHOD_POST, $headers, '', 'access_tokens');
         if ($response['http_code'] != static::HTTP_CODE_CREATED) {
-            throw new RBKmoneyException('Возникла ошибка при создания токена для инвойса');
+            throw new RBKmoneyException('Возникла ошибка при создании токена для инвойса');
         }
 
         $response_decode = json_decode($response['body'], true);
@@ -379,7 +376,7 @@ class RBKmoney
         return $access_token;
     }
 
-    function send($url = '', $method = self::HTTP_METHOD_POST, $headers = [], $data = '', $type = '')
+    private function send($url, $method, $headers = [], $data = '', $type = '')
     {
         $logs = array(
             'request' => array(
@@ -390,40 +387,15 @@ class RBKmoney
             ),
         );
 
-        CEventLog::Add(array(
-            "SEVERITY" => 'INFO',
-            "AUDIT_TYPE_ID" => 'Платежный модуль: rbkmoney_payment',
-            "MODULE_ID" => 'main',
-            "ITEM_ID" => $type . ': request',
-            "DESCRIPTION" => print_r($logs, true),
-        ));
+        RBKmoneyLogger::loggerInfo($type . ': request', $logs);
 
-        $this->checkRequiredFields();
-
-        if (count($this->getErrors()) > 0) {
-            $errors = 'Errors found: ' . implode(', ', $this->getErrors());
-            $logs['error'] = $errors;
-            CEventLog::Add(array(
-                "SEVERITY" => 'ERROR',
-                "AUDIT_TYPE_ID" => 'Платежный модуль: rbkmoney_payment',
-                "MODULE_ID" => 'main',
-                "ITEM_ID" => __CLASS__,
-                "DESCRIPTION" => print_r($logs, true),
-            ));
-            throw new RBKmoneyException($errors);
+        if (empty($url)) {
+            throw new RBKmoneyException('Не передан обязательный параметр url');
         }
-
-        $this->clearErrors();
 
         $allowed_methods = [static::HTTP_METHOD_POST, static::HTTP_METHOD_GET];
         if (!in_array($method, $allowed_methods)) {
-            CEventLog::Add(array(
-                "SEVERITY" => 'ERROR',
-                "AUDIT_TYPE_ID" => 'Платежный модуль: rbkmoney_payment',
-                "MODULE_ID" => 'main',
-                "ITEM_ID" => __CLASS__,
-                "DESCRIPTION" => print_r($logs, true),
-            ));
+            RBKmoneyLogger::loggerError(__CLASS__, $logs);
             throw new RBKmoneyException('Unsupported method ' . $method);
         }
 
@@ -447,17 +419,23 @@ class RBKmoney
 
         $logs['response'] = $response;
 
-        CEventLog::Add(array(
-            "SEVERITY" => 'INFO',
-            "AUDIT_TYPE_ID" => 'Платежный модуль: rbkmoney_payment',
-            "MODULE_ID" => 'main',
-            "ITEM_ID" => $type . ': response',
-            "DESCRIPTION" => print_r($logs, true),
-        ));
+        RBKmoneyLogger::loggerInfo($type . ': response', $logs);
 
         curl_close($curl);
 
         return $response;
+    }
+
+    private function validate() {
+        $this->checkRequiredFields();
+
+        if (count($this->getErrors()) > 0) {
+            $errors = 'Errors found: ' . implode(', ', $this->getErrors());
+            RBKmoneyLogger::loggerError(__CLASS__, $errors);
+            throw new RBKmoneyException($errors);
+        }
+
+        $this->clearErrors();
     }
 
 }

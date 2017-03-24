@@ -27,3 +27,7 @@ https://<your-bitrix-site>/personal/order/rbkmoney_payment/notification.php
 
 
 Все запросы и ответы логируются, с ними можно ознакомиться в разделе `Журнал событий`
+
+
+
+

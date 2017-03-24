@@ -19,26 +19,16 @@ $logs = array(
     ),
 );
 
-CEventLog::Add(array(
-    "SEVERITY" => 'INFO',
-    "AUDIT_TYPE_ID" => 'Платежный модуль: rbkmoney_payment',
-    "MODULE_ID" => 'main',
-    "ITEM_ID" => 'notification',
-    "DESCRIPTION" => print_r($logs, true),
-));
+$item_id = 'notification';
+
+RBKmoneyLogger::loggerInfo($item_id, $logs);
 
 if (empty($_SERVER[RBKmoney::SIGNATURE])) {
     $logs['error'] = array(
         'message' => 'Сигнатура отсутствует',
     );
-    CEventLog::Add(array(
-        "SEVERITY" => 'ERROR',
-        "AUDIT_TYPE_ID" => 'Платежный модуль: rbkmoney_payment',
-        "MODULE_ID" => 'main',
-        "ITEM_ID" => 'notification',
-        "DESCRIPTION" => print_r($logs, true),
-    ));
-    http_response_code(400);
+    RBKmoneyLogger::loggerError('notification', $logs);
+    http_response_code(RBKmoney::HTTP_CODE_BAD_REQUEST);
     exit();
 }
 
@@ -57,14 +47,8 @@ foreach ($required_fields as $field) {
         $logs['error'] = array(
             'message' => 'Отсутствует обязательное поле: ' . $field,
         );
-        CEventLog::Add(array(
-            "SEVERITY" => 'ERROR',
-            "AUDIT_TYPE_ID" => 'Платежный модуль: rbkmoney_payment',
-            "MODULE_ID" => 'main',
-            "ITEM_ID" => 'notification',
-            "DESCRIPTION" => print_r($logs, true),
-        ));
-        http_response_code(400);
+        RBKmoneyLogger::loggerError($item_id, $logs);
+        http_response_code(RBKmoney::HTTP_CODE_BAD_REQUEST);
         exit();
     }
 }
@@ -73,33 +57,19 @@ if (empty($data[RBKmoney::METADATA][RBKmoney::ORDER_ID])) {
     $logs['error'] = array(
         'message' => 'Отсутствует номер заказа',
     );
-    CEventLog::Add(array(
-        "SEVERITY" => 'ERROR',
-        "AUDIT_TYPE_ID" => 'Платежный модуль: rbkmoney_payment',
-        "MODULE_ID" => 'main',
-        "ITEM_ID" => 'notification',
-        "DESCRIPTION" => print_r($logs, true),
-    ));
-    http_response_code(400);
+    RBKmoneyLogger::loggerError($item_id, $logs);
+    http_response_code(RBKmoney::HTTP_CODE_BAD_REQUEST);
     exit();
 }
-if (!$signature = base64_decode($_SERVER[RBKmoney::SIGNATURE])) {
-    http_response_code(400);
-    exit();
-}
+
+$signature = base64_decode($_SERVER[RBKmoney::SIGNATURE]);
 $public_key = CSalePaySystemAction::GetParamValue("SALE_RBKMONEY_MERCHANT_CALLBACK_PUBLIC_KEY");
 if (!RBKmoneyVerification::signature($body, $signature, $public_key)) {
     $logs['error'] = array(
         'message' => 'Сигнатура не совпадает',
     );
-    CEventLog::Add(array(
-        "SEVERITY" => 'ERROR',
-        "AUDIT_TYPE_ID" => 'Платежный модуль: rbkmoney_payment',
-        "MODULE_ID" => 'main',
-        "ITEM_ID" => 'notification',
-        "DESCRIPTION" => print_r($logs, true),
-    ));
-    http_response_code(400);
+    RBKmoneyLogger::loggerError($item_id, $logs);
+    http_response_code(RBKmoney::HTTP_CODE_BAD_REQUEST);
     exit();
 }
 
@@ -108,14 +78,8 @@ if (!($arOrder = CSaleOrder::GetByID($orderId))) {
     $logs['error'] = array(
         'message' => 'Заказ ' . $orderId . ' не найден',
     );
-    CEventLog::Add(array(
-        "SEVERITY" => 'ERROR',
-        "AUDIT_TYPE_ID" => 'Платежный модуль: rbkmoney_payment',
-        "MODULE_ID" => 'main',
-        "ITEM_ID" => 'notification',
-        "DESCRIPTION" => print_r($logs, true),
-    ));
-    http_response_code(400);
+    RBKmoneyLogger::loggerError($item_id, $logs);
+    http_response_code(RBKmoney::HTTP_CODE_BAD_REQUEST);
     exit();
 }
 
@@ -123,14 +87,8 @@ if ($arOrder["PAYED"] == "Y") {
     $logs['error'] = array(
         'message' => 'Заказ ' . $orderId . ' уже оплачен',
     );
-    CEventLog::Add(array(
-        "SEVERITY" => 'ERROR',
-        "AUDIT_TYPE_ID" => 'Платежный модуль: rbkmoney_payment',
-        "MODULE_ID" => 'main',
-        "ITEM_ID" => 'notification',
-        "DESCRIPTION" => print_r($logs, true),
-    ));
-    http_response_code(400);
+    RBKmoneyLogger::loggerError($item_id, $logs);
+    http_response_code(RBKmoney::HTTP_CODE_BAD_REQUEST);
     exit();
 }
 
@@ -150,13 +108,7 @@ $arFields = array(
 );
 
 $logs['status_fields'] = $arFields;
-CEventLog::Add(array(
-    "SEVERITY" => 'INFO',
-    "AUDIT_TYPE_ID" => 'Платежный модуль: rbkmoney_payment',
-    "MODULE_ID" => 'main',
-    "ITEM_ID" => 'notification',
-    "DESCRIPTION" => print_r($logs, true),
-));
+RBKmoneyLogger::loggerInfo($item_id, $logs);
 
 CSaleOrder::Update($arOrder["ID"], $arFields);
 

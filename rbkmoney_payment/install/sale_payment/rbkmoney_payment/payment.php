@@ -22,21 +22,34 @@ $params = array(
     'merchant_private_key' => trim(CSalePaySystemAction::GetParamValue("MERCHANT_PRIVATE_KEY")),
 );
 
-$rbk_api = new RBKmoney($params);
-if (empty($order['PAY_VOUCHER_NUM'])) {
-    $response_create_invoice = $rbk_api->create_invoice();
-    $create_invoice_encode = json_decode($response_create_invoice['body'], true);
-    $invoiceId = !empty($create_invoice_encode['id']) ? $create_invoice_encode['id'] : '';
+$invoiceId = '';
+$invoice_access_token = '';
 
-    CSaleOrder::Update($order_id, Array(
-        'PAY_VOUCHER_NUM' => $invoiceId,
-        'PAY_VOUCHER_DATE' => $GLOBALS["SALE_INPUT_PARAMS"]["ORDER"]["DATE_INSERT"]
-    ));
-} else {
-    $invoiceId = $order['PAY_VOUCHER_NUM'];
+try {
+    $rbk_api = new RBKmoney($params);
+    if (empty($order['PAY_VOUCHER_NUM'])) {
+        $response_create_invoice = $rbk_api->create_invoice();
+        $create_invoice_encode = json_decode($response_create_invoice['body'], true);
+        $invoiceId = !empty($create_invoice_encode['id']) ? $create_invoice_encode['id'] : '';
+
+        CSaleOrder::Update($order_id, Array(
+            'PAY_VOUCHER_NUM' => $invoiceId,
+            'PAY_VOUCHER_DATE' => $GLOBALS["SALE_INPUT_PARAMS"]["ORDER"]["DATE_INSERT"]
+        ));
+    } else {
+        $invoiceId = $order['PAY_VOUCHER_NUM'];
+    }
+
+    $invoice_access_token = $rbk_api->create_access_token($invoiceId);
+
+} catch (Exception $ex) {
+    $logs = [
+        "code" => $ex->getCode(),
+        "message" => $ex->getMessage(),
+    ];
+    RBKmoneyLogger::loggerError("init_invoice_exception", $logs);
 }
 
-$invoice_access_token = $rbk_api->create_access_token($invoiceId);
 ?>
 
 <script src="https://checkout.rbk.money/payframe/payframe.js" class="rbkmoney-checkout"
