@@ -163,10 +163,15 @@ class RBKmoney
     }
 
     /**
-     * @param int $amount
+     * @param $amount
+     * @throws RBKmoneyException
      */
     public function setAmount($amount)
     {
+        if(!is_integer($amount)) {
+            throw new RBKmoneyException($amount . ' no a integer');
+        }
+
         $this->amount = $amount;
     }
 
@@ -307,7 +312,7 @@ class RBKmoney
      */
     private function prepare_amount($amount)
     {
-        return ($amount > 0) ? ($amount * 100) : $amount;
+        return $amount * 100;
     }
 
     private function prepare_api_url($path = '', $query_params = [])
