@@ -15,7 +15,7 @@ $content = file_get_contents('php://input');
 $logs = array(
     'request' => array(
         'method' => 'POST',
-        'data' => $body,
+        'data' => $content,
     ),
 );
 
@@ -42,7 +42,8 @@ if (empty($params_signature[RBKmoneyVerification::SIGNATURE_DIGEST])) {
 
 $signature = RBKmoneyVerification::url_safe_b64decode($params_signature[RBKmoneyVerification::SIGNATURE_DIGEST]);
 $public_key = RBKmoneyVerification::prepare_public_key(COption::GetOptionString("rbkmoney_checkout", "MERCHANT_CALLBACK_PUBLIC_KEY"));
-
+$logs['signature'] = $signature;
+$logs['public_key'] = $public_key;
 
 if (!RBKmoneyVerification::verification_signature($content, $signature, $public_key)) {
     $logs['error']['message'] = 'Webhook notification signature mismatch';
@@ -86,7 +87,7 @@ if ($arOrder["PAYED"] != "Y" && $data[RBKmoney::INVOICE][RBKmoney::INVOICE_STATU
 $arFields = array(
     "PS_STATUS" => "Y",
     "PS_STATUS_CODE" => $data[RBKmoney::INVOICE_STATUS],
-    "PS_STATUS_DESCRIPTION" => $body,
+    "PS_STATUS_DESCRIPTION" => $content,
     "PS_STATUS_MESSAGE" => 'ok',
     "PS_SUM" => $data[RBKmoney::AMOUNT],
     "PS_CURRENCY" => $data[RBKmoney::CURRENCY],
