@@ -42,7 +42,6 @@ if (empty($params_signature[RBKmoneyVerification::SIGNATURE_DIGEST])) {
 
 $signature = RBKmoneyVerification::url_safe_b64decode($params_signature[RBKmoneyVerification::SIGNATURE_DIGEST]);
 $public_key = RBKmoneyVerification::prepare_public_key(COption::GetOptionString("rbkmoney_checkout", "MERCHANT_CALLBACK_PUBLIC_KEY"));
-$logs['signature'] = $signature;
 $logs['public_key'] = $public_key;
 
 if (!RBKmoneyVerification::verification_signature($content, $signature, $public_key)) {
