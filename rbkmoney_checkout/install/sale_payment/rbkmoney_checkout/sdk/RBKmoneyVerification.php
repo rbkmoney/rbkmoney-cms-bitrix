@@ -49,8 +49,7 @@ class RBKmoneyVerification
     }
 
     public static function prepare_public_key($public_key) {
-        $public_key_wrap = wordwrap(trim($public_key), 55, PHP_EOL, true);
-        return '-----BEGIN PUBLIC KEY-----' . PHP_EOL . $public_key_wrap . PHP_EOL . '-----END PUBLIC KEY-----';
+        return $public_key;
     }
 
 }
