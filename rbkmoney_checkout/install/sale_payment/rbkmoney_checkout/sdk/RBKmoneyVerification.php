@@ -49,7 +49,7 @@ class RBKmoneyVerification
     }
 
     public static function prepare_public_key($public_key) {
-        return $public_key;
+        return trim($public_key);
     }
 
 }
