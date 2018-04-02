@@ -9,7 +9,7 @@ class RBKmoneyUrlHelper
 
     public static function getCurrentSchema()
     {
-        return ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == "on") ? "https" : "http");
+        return ((isset($_SERVER['HTTPS']) && preg_match("/^on$/i", $_SERVER['HTTPS'])) ? "https" : "http");
     }
 
     public static function getCurrentHostName()
